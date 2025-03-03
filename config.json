@@ -1,5 +1,6 @@
 {
-  "repo_url": "github.com/utilisateur/mon-repo.git",
-  "repo_path": "C:/chemin/vers/le/repo",
-  "git_token": "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"
+  "repo_url": "https://github.com/SERVEURVISION/Vision-V2.git",
+  "repo_path": "C:/Users/Administrator/Desktop/Vision-V2",
+  "build_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface",
+  "branch": "dev"
 }

@@ -10,9 +10,10 @@ import (
 )
 
 type Config struct {
-	RepoURL  string `json:"repo_url"`
-	RepoPath string `json:"repo_path"`
-	GitToken string `json:"git_token"`
+	RepoURL   string `json:"repo_url"`
+	RepoPath  string `json:"repo_path"`
+	BuildPath string `json:"build_path"`
+	Branch    string `json:"branch"`
 }
 
 func main() {
@@ -22,22 +23,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if config.GitToken == "" {
-		fmt.Println("❌ ERREUR: Le token GitHub est manquant dans config.json.")
-		os.Exit(1)
-	}
-
-	authURL := fmt.Sprintf("https://%s@%s", config.GitToken, config.RepoURL)
-
 	for {
 		fmt.Println("🔄 Vérification des mises à jour...")
 
-		if hasUpdates(config.RepoPath, authURL) {
+		if hasUpdates(config.RepoPath, config.Branch) {
 			fmt.Println("🚀 Mise à jour détectée, pull en cours...")
-			runCommand(config.RepoPath, "git", "pull", authURL)
+			runCommand(config.RepoPath, "git", "pull", config.RepoURL)
 
-			runCommand(config.RepoPath, "pnpm", "install")
-			runCommand(config.RepoPath, "pnpm", "run", "build")
+			runCommand(config.BuildPath, "pnpm", "install")
+			runCommand(config.BuildPath, "pnpm", "run", "build")
 		} else {
 			fmt.Println("✅ Pas de mise à jour.")
 		}
@@ -56,9 +50,14 @@ func loadConfig(filename string) (Config, error) {
 	return config, err
 }
 
-func hasUpdates(repoPath, authURL string) bool {
-	output := runCommand(repoPath, "git", "fetch", authURL, "--dry-run")
-	return strings.TrimSpace(output) != ""
+func hasUpdates(repoPath, branch string) bool {
+	localCommit := runCommand(repoPath, "git", "rev-parse", "HEAD")
+	localCommit = strings.TrimSpace(localCommit)
+
+	remoteCommit := runCommand(repoPath, "git", "ls-remote", "origin", branch)
+	remoteCommit = strings.Fields(remoteCommit)[0]
+
+	return localCommit != remoteCommit
 }
 
 func runCommand(dir string, name string, args ...string) string {
