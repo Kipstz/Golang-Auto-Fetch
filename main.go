@@ -26,10 +26,14 @@ func main() {
 	for {
 		fmt.Println("🔄 Vérification des mises à jour...")
 
+		fmt.Println("🔍 Fetch des dernières modifications...")
+		runCommand(config.RepoPath, "git", "fetch", "origin")
+
 		if hasUpdates(config.RepoPath, config.Branch) {
 			fmt.Println("🚀 Mise à jour détectée, pull en cours...")
-			runCommand(config.RepoPath, "git", "pull", config.RepoURL)
+			runCommand(config.RepoPath, "git", "pull", "origin", config.Branch)
 
+			fmt.Println("🔨 Installation des dépendances et build en cours...")
 			runCommand(config.BuildPath, "pnpm", "install")
 			runCommand(config.BuildPath, "pnpm", "run", "build")
 		} else {
@@ -54,8 +58,8 @@ func hasUpdates(repoPath, branch string) bool {
 	localCommit := runCommand(repoPath, "git", "rev-parse", "HEAD")
 	localCommit = strings.TrimSpace(localCommit)
 
-	remoteCommit := runCommand(repoPath, "git", "ls-remote", "origin", branch)
-	remoteCommit = strings.Fields(remoteCommit)[0]
+	remoteCommit := runCommand(repoPath, "git", "rev-parse", fmt.Sprintf("origin/%s", branch))
+	remoteCommit = strings.TrimSpace(remoteCommit)
 
 	return localCommit != remoteCommit
 }
