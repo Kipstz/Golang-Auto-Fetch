@@ -17,10 +17,10 @@ type Config struct {
 }
 
 type Repo struct {
-	RepoURL   string `json:"repo_url"`
-	RepoPath  string `json:"repo_path"`
-	BildPath string `json:"build_path"`
-	Branch    string `json:"branch"`
+	RepoURL   string   `json:"repo_url"`
+	RepoPath  string   `json:"repo_path"`
+	Branch    string   `json:"branch"`
+	Commands  []string `json:"commands"`
 }
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 
 			if hasUpdates(repo.RepoPath, repo.Branch) {
 				fmt.Println("🚀 Mise à jour détectée, pull en cours...")
-				sendDiscordEmbedWebhook(config.WebhookURL, repo.RepoURL, repo.RepoPath, repo.Branch)
+				sendDiscordEmbedWebhook(config.WebhookURL, repo.RepoURL, repo.RepoPath, repo.Branch, repo.Commands)
 			} else {
 				fmt.Println("✅ Pas de mise à jour.")
 			}
@@ -92,7 +92,22 @@ func runCommand(dir string, name string, args ...string) (string, error) {
 	return string(output), nil
 }
 
-func sendDiscordEmbedWebhook(webhookURL, repoURL, repoPath, branch string) {
+func runCustomCommands(repoPath string, commands []string) (string, error) {
+	var output bytes.Buffer
+
+	for _, cmd := range commands {
+		args := strings.Split(cmd, " ")
+		cmdOutput, err := runCommand(repoPath, args[0], args[1:]...)
+		if err != nil {
+			return output.String(), fmt.Errorf("❌ Erreur lors de l'exécution de la commande `%s`: %v\nOutput: %s", cmd, err, cmdOutput)
+		}
+		output.WriteString(fmt.Sprintf("✅ Commande `%s` exécutée avec succès.\nOutput:\n%s\n", cmd, cmdOutput))
+	}
+
+	return output.String(), nil
+}
+
+func sendDiscordEmbedWebhook(webhookURL, repoURL, repoPath, branch string, commands []string) {
 	if webhookURL == "" {
 		return
 	}
@@ -104,6 +119,16 @@ func sendDiscordEmbedWebhook(webhookURL, repoURL, repoPath, branch string) {
 
 	newCommit, _ := runCommand(repoPath, "git", "rev-parse", "HEAD")
 	newCommit = strings.TrimSpace(newCommit)
+
+	commandsOutput := ""
+	if len(commands) > 0 {
+		output, err := runCustomCommands(repoPath, commands)
+		if err != nil {
+			commandsOutput = fmt.Sprintf("❌ Erreur lors de l'exécution des commandes : %v", err)
+		} else {
+			commandsOutput = output
+		}
+	}
 
 	payload := map[string]interface{}{
 		"embeds": []map[string]interface{}{
@@ -123,6 +148,10 @@ func sendDiscordEmbedWebhook(webhookURL, repoURL, repoPath, branch string) {
 					{
 						"name":  "Logs du Pull",
 						"value": fmt.Sprintf("```%s```", truncateString(pullOutput, 1000)),
+					},
+					{
+						"name":  "Logs des Commandes",
+						"value": fmt.Sprintf("```%s```", truncateString(commandsOutput, 1000)),
 					},
 				},
 				"timestamp": time.Now().Format(time.RFC3339),
@@ -153,5 +182,5 @@ func truncateString(s string, maxLen int) string {
 
 func logError(webhookURL string, message string) {
 	fmt.Println(message)
-	sendDiscordEmbedWebhook(webhookURL, "Erreur", "N/A", "N/A")
+	sendDiscordEmbedWebhook(webhookURL, "Erreur", "N/A", "N/A", []string{})
 }

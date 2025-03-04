@@ -4,8 +4,22 @@
     {
       "repo_url": "https://github.com/SERVEURVISION/Vision-V2.git",
       "repo_path": "C:/Users/Administrator/Desktop/Vision-V2",
-      "build_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface",
-      "branch": "dev"
+      "branch": "dev",
+      "commands": [
+        "cd C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface && pnpm install && pnpm run build",
+      ]
+    },
+    {
+      "repo_url": "https://github.com/SERVEURVISION/Vision-Contributeurs.git",
+      "repo_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/[Stream]/[Vision-Contributeurs]",
+      "branch": "ContribV2",
+      "commands": []
+    },
+    {
+      "repo_url": "https://github.com/SERVEURVISION/vision_mapping.git",
+      "repo_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/[Stream]/[vision_mapping]",
+      "branch": "V2",
+      "commands": []
     }
   ]
 }
