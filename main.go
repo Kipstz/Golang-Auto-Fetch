@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-	"bytes"
 )
 
 type Config struct {
@@ -19,7 +19,7 @@ type Config struct {
 type Repo struct {
 	RepoURL   string `json:"repo_url"`
 	RepoPath  string `json:"repo_path"`
-	BuildPath string `json:"build_path"`
+	BildPath string `json:"build_path"`
 	Branch    string `json:"branch"`
 }
 
@@ -36,36 +36,15 @@ func main() {
 		for _, repo := range config.Repos {
 			fmt.Printf("🔍 Vérification du dépôt : %s (%s)\n", repo.RepoURL, repo.Branch)
 
-            _, err := runCommand(repo.RepoPath, "git", "fetch", "origin")
-            if err != nil {
-                logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du fetch pour %s: %v", repo.RepoURL, err))
-                continue
-            }
-
+			_, err := runCommand(repo.RepoPath, "git", "fetch", "origin")
+			if err != nil {
+				logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du fetch pour %s: %v", repo.RepoURL, err))
+				continue
+			}
 
 			if hasUpdates(repo.RepoPath, repo.Branch) {
 				fmt.Println("🚀 Mise à jour détectée, pull en cours...")
-				_, err := runCommand(repo.RepoPath, "git", "pull", "origin", repo.Branch)
-				if err != nil {
-					logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du pull pour %s: %v", repo.RepoURL, err))
-					continue
-				}
-
-				fmt.Println("🔨 Installation des dépendances et build en cours...")
-				_, err = runCommand(repo.BuildPath, "pnpm", "install")
-
-				if err != nil {
-					logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors de l'installation des dépendances pour %s: %v", repo.RepoURL, err))
-					continue
-				}
-
-				_, err = runCommand(repo.BuildPath, "pnpm", "run", "build")
-
-				if err != nil {
-					logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du build pour %s: %v", repo.RepoURL, err))
-					continue
-				}
-				sendDiscordWebhook(config.WebhookURL, fmt.Sprintf("🚀 Mise à jour détectée et build réussi pour le dépôt : %s (%s)" + "", repo.RepoURL, repo.Branch))
+				sendDiscordEmbedWebhook(config.WebhookURL, repo.RepoURL, repo.RepoPath, repo.Branch)
 			} else {
 				fmt.Println("✅ Pas de mise à jour.")
 			}
@@ -113,14 +92,44 @@ func runCommand(dir string, name string, args ...string) (string, error) {
 	return string(output), nil
 }
 
-func sendDiscordWebhook(webhookURL string, message string) {
+func sendDiscordEmbedWebhook(webhookURL, repoURL, repoPath, branch string) {
 	if webhookURL == "" {
 		return
 	}
 
-	payload := map[string]string{
-		"content": message,
+	oldCommit, _ := runCommand(repoPath, "git", "rev-parse", "HEAD")
+	oldCommit = strings.TrimSpace(oldCommit)
+
+	pullOutput, _ := runCommand(repoPath, "git", "pull", "origin", branch)
+
+	newCommit, _ := runCommand(repoPath, "git", "rev-parse", "HEAD")
+	newCommit = strings.TrimSpace(newCommit)
+
+	payload := map[string]interface{}{
+		"embeds": []map[string]interface{}{
+			{
+				"title":       "🚀 Mise à jour détectée et appliquée",
+				"description": fmt.Sprintf("Le dépôt **[%s]** a été mis à jour sur la branche `%s`.", repoURL, branch),
+				"color":       5814783,
+				"fields": []map[string]string{
+					{
+						"name":  "Ancien Commit",
+						"value": fmt.Sprintf("`%s`", oldCommit),
+					},
+					{
+						"name":  "Nouveau Commit",
+						"value": fmt.Sprintf("`%s`", newCommit),
+					},
+					{
+						"name":  "Logs du Pull",
+						"value": fmt.Sprintf("```%s```", truncateString(pullOutput, 1000)),
+					},
+				},
+				"timestamp": time.Now().Format(time.RFC3339),
+			},
+		},
 	}
+
 	payloadBytes, _ := json.Marshal(payload)
 
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(payloadBytes))
@@ -131,11 +140,18 @@ func sendDiscordWebhook(webhookURL string, message string) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		fmt.Println("❌ Erreur: Le webhook Discord a retourné un statut inattendu:", resp.Status)
+		fmt.Println("❌ Erreur: Webhook Discord a retourné un statut inattendu:", resp.Status)
 	}
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen] + "..."
+	}
+	return s
 }
 
 func logError(webhookURL string, message string) {
 	fmt.Println(message)
-	sendDiscordWebhook(webhookURL, message)
+	sendDiscordEmbedWebhook(webhookURL, "Erreur", "N/A", "N/A")
 }
