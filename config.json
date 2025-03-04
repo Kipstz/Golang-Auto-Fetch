@@ -1,6 +1,11 @@
 {
-  "repo_url": "https://github.com/SERVEURVISION/Vision-V2.git",
-  "repo_path": "C:/Users/Administrator/Desktop/Vision-V2",
-  "build_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface",
-  "branch": "dev"
+  "webhook_url": "https://discord.com/api/webhooks/1346472693821603860/He1omt54igWjSRuUfQl_QHrIFzTGrpqY45TkLuvBatNjEPDKEKC91n-rUfhunZ7H5_y9",
+  "repos": [
+    {
+      "repo_url": "https://github.com/SERVEURVISION/Vision-V2.git",
+      "repo_path": "C:/Users/Administrator/Desktop/Vision-V2",
+      "build_path": "C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface",
+      "branch": "dev"
+    }
+  ]
 }
