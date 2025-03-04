@@ -6,7 +6,7 @@
       "repo_path": "C:/Users/Administrator/Desktop/Vision-V2",
       "branch": "dev",
       "commands": [
-        "cd C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface && pnpm install && pnpm run build",
+        "cd C:/Users/Administrator/Desktop/Vision-V2/resources/core/client/interface && pnpm install && pnpm run build"
       ]
     },
     {
