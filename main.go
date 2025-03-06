@@ -36,14 +36,20 @@ func main() {
 		for _, repo := range config.Repos {
 			fmt.Printf("🔍 Vérification du dépôt : %s (%s)\n", repo.RepoURL, repo.Branch)
 
-			_, err := runCommand(repo.RepoPath, "git", "fetch", "origin")
+			err := stashAndFetch(repo.RepoPath, repo.Branch)
 			if err != nil {
-				logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du fetch pour %s: %v", repo.RepoURL, err))
+				logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du stash et fetch pour %s: %v", repo.RepoURL, err))
 				continue
 			}
 
 			if hasUpdates(repo.RepoPath, repo.Branch) {
 				fmt.Println("🚀 Mise à jour détectée, pull en cours...")
+				_, err := runCommand(repo.RepoPath, "git", "pull", "origin", repo.Branch)
+				if err != nil {
+					logError(config.WebhookURL, fmt.Sprintf("❌ Erreur lors du pull pour %s: %v", repo.RepoURL, err))
+					continue
+				}
+
 				sendDiscordEmbedWebhook(config.WebhookURL, repo.RepoURL, repo.RepoPath, repo.Branch, repo.Commands)
 			} else {
 				fmt.Println("✅ Pas de mise à jour.")
@@ -81,7 +87,9 @@ func hasUpdates(repoPath, branch string) bool {
 }
 
 func runCommand(dir string, name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+	cmdArgs := append([]string{"/C", "cd", dir, "&&", name}, args...)
+
+	cmd := exec.Command("cmd", cmdArgs...)
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
@@ -90,6 +98,20 @@ func runCommand(dir string, name string, args ...string) (string, error) {
 	}
 
 	return string(output), nil
+}
+
+func stashAndFetch(repoPath string, branch string) error {
+	_, err := runCommand(repoPath, "git", "stash")
+	if err != nil {
+		return fmt.Errorf("erreur lors du stash des modifications : %v", err)
+	}
+
+	_, err = runCommand(repoPath, "git", "fetch", "origin")
+	if err != nil {
+		return fmt.Errorf("erreur lors du fetch : %v", err)
+	}
+
+	return nil
 }
 
 func runCustomCommands(repoPath string, commands []string) (string, error) {
