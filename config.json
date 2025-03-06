@@ -2,6 +2,14 @@
   "webhook_url": "https://discord.com/api/webhooks/",
   "repos": [
     {
+      "repo_url": "https://github.com/Kiptz/exemple.git",
+      "repo_path": "C:/Users/Administrator/Desktop/exemple",
+      "branch": "main",
+      "commands": [
+        "cd C:/Users/Administrator/Desktop/exemple && pnpm install && pnpm run build"
+      ]
+    },
+    {
       "repo_url": "https://github.com/Kiptz/exemple2.git",
       "repo_path": "C:/Users/Administrator/Desktop/exemple2",
       "branch": "dev",
